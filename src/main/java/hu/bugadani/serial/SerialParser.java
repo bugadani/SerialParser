@@ -28,7 +28,6 @@ public class SerialParser {
                 return mListenerList;
             }
 
-            @Override
             public void onFrameMatched(FrameDefinition frame, byte[] data) {
                 for (FrameMatchListener listener : getListeners()) {
                     listener.onFrameMatched(frame, data);
@@ -43,7 +42,7 @@ public class SerialParser {
         private int mBufferSize       = 0;
         private int mLongestFrameSize = 0;
 
-        private final List<FrameDefinition> mFrameDefinitionList = new ArrayList<>();
+        private final List<FrameDefinition> mFrameDefinitionList = new ArrayList<FrameDefinition>();
 
         public Builder setBufferSize(int bufferSize) {
             mBufferSize = bufferSize;
@@ -72,8 +71,6 @@ public class SerialParser {
     }
 
     public static class FrameDefinition {
-
-        public static final String TAG = "FrameDefinition";
 
         public enum MatchResult {
             No,
