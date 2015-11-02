@@ -12,7 +12,7 @@ public class SerialParser {
 
         class Aggregator implements FrameMatchListener {
 
-            private final List<FrameMatchListener> mListenerList = new ArrayList<>();
+            private final List<FrameMatchListener> mListenerList = new ArrayList<FrameMatchListener>();
 
             public void add(FrameMatchListener listener) {
                 if (!mListenerList.contains(listener)) {
