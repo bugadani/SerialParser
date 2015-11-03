@@ -62,7 +62,7 @@ public class SerialParser {
             final SerialParser object = new SerialParser();
 
             object.mSyncBuffer =
-                    new CircularByteArray(Math.max(5 * mLongestFrameSize, mBufferSize));
+                    new ByteRingBuffer(Math.max(5 * mLongestFrameSize, mBufferSize));
             object.mFrameDefinitionList = mFrameDefinitionList;
             object.mLongestFrameSize = mLongestFrameSize;
 
@@ -136,7 +136,7 @@ public class SerialParser {
             mInitialized = true;
         }
 
-        public MatchResult match(CircularByteArray syncBuffer) {
+        public MatchResult match(ByteRingBuffer syncBuffer) {
 
             byte[] headerBytes;
             try {
@@ -173,7 +173,7 @@ public class SerialParser {
             return mHeader.length + mDataLength + (mHasTerminatingByte ? 1 : 0);
         }
 
-        private MatchResult matched(CircularByteArray syncBuffer, int length) {
+        private MatchResult matched(ByteRingBuffer syncBuffer, int length) {
 
             syncBuffer.remove(mHeader.length);
 
@@ -189,7 +189,7 @@ public class SerialParser {
         }
     }
 
-    private CircularByteArray     mSyncBuffer;
+    private ByteRingBuffer mSyncBuffer;
     private List<FrameDefinition> mFrameDefinitionList;
     private int                   mLongestFrameSize;
 

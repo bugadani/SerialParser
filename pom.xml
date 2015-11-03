@@ -22,7 +22,14 @@
         <connection>scm:git:git://github.com/bugadani/SerialParser.git</connection>
         <developerConnection>scm:git:git@github.com:bugadani/SerialParser.git</developerConnection>
     </scm>
-
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
     <developers>
         <developer>
             <name>Dániel Buga</name>

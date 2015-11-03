@@ -6,12 +6,18 @@ import java.nio.BufferUnderflowException;
 /**
  * A circular byte buffer class
  */
-public class CircularByteArray {
-    private byte[] mArray;
-    private int    mHead;
-    private int    mTail;
+public class ByteRingBuffer {
+    enum CopyAlignment {
+        Left,
+        Right
+    }
 
-    public CircularByteArray(int cap) {
+    private byte[] mArray;
+    private int mHead;
+    private int mTail;
+    private int mSize;
+
+    public ByteRingBuffer(int cap) {
         setCapacity(cap);
     }
 
@@ -28,17 +34,18 @@ public class CircularByteArray {
         byte[] array = new byte[capacity];
         if (isEmpty()) {
             //No copying is necessary
-            mHead = 0;
+            mSize = 0;
         } else {
-            copyBufferContents(array);
-            mHead = Math.min(getSize(), capacity);
+            copyBufferContents(array, CopyAlignment.Right);
+            mSize = Math.min(mSize, capacity);
         }
         mTail = 0;
+        mHead = mSize;
         mArray = array;
     }
 
-    private void copyBufferContents(byte[] dest) {
-        int size       = getSize();
+    private void copyBufferContents(byte[] dest, CopyAlignment alignment) {
+        int size = mSize;
         int copyLength = Math.min(dest.length, size);
         if (copyLength == 0) {
             //Don't copy if there is nothing to copy
@@ -48,9 +55,12 @@ public class CircularByteArray {
         int tail = mTail;
         //If buffer is smaller than the current data size...
         if (copyLength < size) {
-            //... drop bytes from beginning
-            int dropBytes = size - copyLength;
-            tail = wrap(tail + dropBytes);
+            if (alignment == CopyAlignment.Right) {//... drop bytes from beginning
+                int dropBytes = size - copyLength;
+                tail = wrap(tail + dropBytes);
+            }
+        } else if(alignment == CopyAlignment.Left) {
+             copyLength = size;
         }
 
         int distToEnd = mArray.length - tail;
@@ -77,10 +87,12 @@ public class CircularByteArray {
 
     private void stepTail(int i) {
         mTail = wrap(mTail + i);
+        mSize -= i;
     }
 
     private void stepHead(int i) {
         mHead = wrap(mHead + i);
+        mSize += i;
     }
 
     /**
@@ -94,28 +106,28 @@ public class CircularByteArray {
      * @return The current number of bytes in the buffer
      */
     public int getSize() {
-        return mHead - mTail;
+        return mSize;
     }
 
     /**
      * @return The current free space in the buffer
      */
     public int getSpace() {
-        return mArray.length - getSize();
+        return mArray.length - mSize;
     }
 
     /**
      * @return True if the buffer is empty
      */
     public boolean isEmpty() {
-        return (mHead == mTail);
+        return mSize == 0;
     }
 
     /**
      * @return True if the buffer is full
      */
     public boolean isFull() {
-        return (getSize() == mArray.length);
+        return mSize == mArray.length;
     }
 
     /**
@@ -197,7 +209,7 @@ public class CircularByteArray {
      * @return The removed bytes
      */
     public byte[] removeAll() {
-        return remove(getSize());
+        return remove(mSize);
     }
 
     /**
@@ -218,7 +230,7 @@ public class CircularByteArray {
      * @throws BufferUnderflowException
      */
     public byte peek(int n) throws BufferUnderflowException {
-        if (n >= getSize()) {
+        if (n >= mSize) {
             throw new BufferUnderflowException();
         }
         return mArray[wrap(mTail + n)];
@@ -233,12 +245,12 @@ public class CircularByteArray {
     public byte[] peekMultiple(int n) throws BufferUnderflowException {
         // For efficiency, the bytes are copied in blocks
         // instead of one at a time.
-        if (n > getSize()) {
+        if (n > mSize) {
             throw new BufferUnderflowException();
         }
 
         byte[] bytes = new byte[n];
-        copyBufferContents(bytes);
+        copyBufferContents(bytes, CopyAlignment.Left);
         return bytes;
     }
 
@@ -248,6 +260,6 @@ public class CircularByteArray {
      * @return The copied bytes
      */
     public byte[] peekAll() {
-        return peekMultiple(getSize());
+        return peekMultiple(mSize);
     }
 }
