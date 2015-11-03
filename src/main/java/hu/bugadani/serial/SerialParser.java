@@ -39,10 +39,11 @@ public class SerialParser {
     }
 
     public static class Builder {
-        private int mBufferSize       = 0;
+        private int mBufferSize = 0;
         private int mLongestFrameSize = 0;
 
         private final List<FrameDefinition> mFrameDefinitionList = new ArrayList<FrameDefinition>();
+        private final List<Integer> mFrameIds = new ArrayList<Integer>();
 
         public Builder setBufferSize(int bufferSize) {
             mBufferSize = bufferSize;
@@ -51,8 +52,14 @@ public class SerialParser {
         }
 
         public Builder addFrameDefinition(FrameDefinition frameDefinition) {
+
+            if (mFrameIds.contains(frameDefinition.mFrameId)) {
+                throw new IllegalArgumentException("Duplicate frame id: " + frameDefinition.mFrameId);
+            }
+
             mLongestFrameSize = Math.max(mLongestFrameSize, frameDefinition.getFrameLength());
             mFrameDefinitionList.add(frameDefinition);
+            mFrameIds.add(frameDefinition.mFrameId);
             frameDefinition.setInited();
 
             return this;
@@ -60,6 +67,14 @@ public class SerialParser {
 
         public SerialParser build() {
             final SerialParser object = new SerialParser();
+
+            if (mBufferSize == 0) {
+                for (FrameDefinition def : mFrameDefinitionList) {
+                    if (def.mDataLength == FrameDefinition.VARIABLE_LENGTH) {
+                        throw new IllegalStateException("Variable length frames require a specified buffer size");
+                    }
+                }
+            }
 
             object.mSyncBuffer = new ByteRingBuffer(Math.max(5 * mLongestFrameSize, mBufferSize));
             object.mFrameDefinitionList = mFrameDefinitionList;
@@ -82,10 +97,10 @@ public class SerialParser {
         private final int mFrameId;
 
         private byte[] mHeader;
-        private int     mDataLength         = VARIABLE_LENGTH;
+        private int mDataLength = VARIABLE_LENGTH;
         private boolean mHasTerminatingByte = false;
-        private byte    mTerminatingByte    = 0;
-        private boolean mInitialized        = false;
+        private byte mTerminatingByte = 0;
+        private boolean mInitialized = false;
 
         private final FrameMatchListener.Aggregator listeners = new FrameMatchListener.Aggregator();
 
@@ -135,7 +150,7 @@ public class SerialParser {
             mInitialized = true;
         }
 
-        public MatchResult match(ByteRingBuffer syncBuffer) {
+        private MatchResult match(ByteRingBuffer syncBuffer) {
 
             byte[] headerBytes;
             try {
@@ -168,7 +183,7 @@ public class SerialParser {
             return MatchResult.Maybe;
         }
 
-        public int getFrameLength() {
+        private int getFrameLength() {
             return mHeader.length + mDataLength + (mHasTerminatingByte ? 1 : 0);
         }
 
@@ -190,7 +205,7 @@ public class SerialParser {
 
     private ByteRingBuffer mSyncBuffer;
     private List<FrameDefinition> mFrameDefinitionList;
-    private int                   mLongestFrameSize;
+    private int mLongestFrameSize;
 
     protected SerialParser() {
     }
