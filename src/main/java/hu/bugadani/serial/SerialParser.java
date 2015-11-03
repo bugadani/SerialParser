@@ -61,8 +61,7 @@ public class SerialParser {
         public SerialParser build() {
             final SerialParser object = new SerialParser();
 
-            object.mSyncBuffer =
-                    new ByteRingBuffer(Math.max(5 * mLongestFrameSize, mBufferSize));
+            object.mSyncBuffer = new ByteRingBuffer(Math.max(5 * mLongestFrameSize, mBufferSize));
             object.mFrameDefinitionList = mFrameDefinitionList;
             object.mLongestFrameSize = mLongestFrameSize;
 
