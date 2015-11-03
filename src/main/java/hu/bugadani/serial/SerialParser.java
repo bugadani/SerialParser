@@ -38,6 +38,9 @@ public class SerialParser {
         void onFrameMatched(FrameDefinition frame, byte[] data);
     }
 
+    /**
+     * This class is used to initialize a SerialParser instance.
+     */
     public static class Builder {
         private int mBufferSize = 0;
         private int mLongestFrameSize = 0;
@@ -45,12 +48,24 @@ public class SerialParser {
         private final List<FrameDefinition> mFrameDefinitionList = new ArrayList<FrameDefinition>();
         private final List<Integer> mFrameIds = new ArrayList<Integer>();
 
+        /**
+         * Sets an explicit buffer size
+         *
+         * Note: this is only a hint and may be overridden if a fixed length frame is longer than bufferSize.
+         *
+         * @param bufferSize The buffer size
+         * @return Fluent interface
+         */
         public Builder setBufferSize(int bufferSize) {
             mBufferSize = bufferSize;
 
             return this;
         }
 
+        /**
+         * @param frameDefinition The frame definition to be added
+         * @return Fluent interface
+         */
         public Builder addFrameDefinition(FrameDefinition frameDefinition) {
 
             if (mFrameIds.contains(frameDefinition.mFrameId)) {
@@ -65,6 +80,11 @@ public class SerialParser {
             return this;
         }
 
+        /**
+         * Construct the SerialParser object
+         *
+         * @return The created object
+         */
         public SerialParser build() {
             final SerialParser object = new SerialParser();
 
@@ -76,7 +96,7 @@ public class SerialParser {
                 }
             }
 
-            object.mSyncBuffer = new ByteRingBuffer(Math.max(5 * mLongestFrameSize, mBufferSize));
+            object.mSyncBuffer = new ByteRingBuffer(Math.max(mLongestFrameSize, mBufferSize));
             object.mFrameDefinitionList = mFrameDefinitionList;
             object.mLongestFrameSize = mLongestFrameSize;
 
@@ -84,6 +104,9 @@ public class SerialParser {
         }
     }
 
+    /**
+     * This class holds frame definition data, like header bytes, length specification, terminating byte.
+     */
     public static class FrameDefinition {
 
         public enum MatchResult {
@@ -104,23 +127,53 @@ public class SerialParser {
 
         private final FrameMatchListener.Aggregator listeners = new FrameMatchListener.Aggregator();
 
+        /**
+         * Construct a FrameDefinition instance
+         *
+         * @param frameId
+         * @param header
+         */
         public FrameDefinition(int frameId, String header) {
             this(frameId, header.getBytes());
         }
 
+        /**
+         * Construct a FrameDefinition instance
+         *
+         * @param frameId
+         * @param header
+         */
         public FrameDefinition(int frameId, char header) {
             this(frameId, new byte[]{(byte) header});
         }
 
+        /**
+         * Construct a FrameDefinition instance
+         *
+         * @param frameId
+         * @param header
+         */
         public FrameDefinition(int frameId, byte header) {
             this(frameId, new byte[]{header});
         }
 
+        /**
+         * Construct a FrameDefinition instance
+         *
+         * @param frameId
+         * @param header
+         */
         public FrameDefinition(int frameId, byte[] header) {
             mFrameId = frameId;
             mHeader = header;
         }
 
+        /**
+         * Check if frameId matched the frame's ID
+         *
+         * @param frameId
+         * @return true if the ids are equal
+         */
         public boolean isFrame(int frameId) {
             return mFrameId == frameId;
         }
@@ -131,12 +184,22 @@ public class SerialParser {
             }
         }
 
+        /**
+         * Set the length of data inside the frame.
+         *
+         * @param length A positive integer length or VARIABLE_LENGTH constant
+         * @return Fluent interface
+         */
         public FrameDefinition setDataLength(int length) {
             initGuard();
             mDataLength = length;
             return this;
         }
 
+        /**
+         * @param terminatingByte
+         * @return Fluent interface
+         */
         public FrameDefinition setTerminatingByte(byte terminatingByte) {
             initGuard();
             mTerminatingByte = terminatingByte;
@@ -144,11 +207,23 @@ public class SerialParser {
             return this;
         }
 
+        /**
+         * Add a listener that will be called when the frame is matched
+         *
+         * @param listener
+         * @return Fluent interface
+         */
         public FrameDefinition addListener(FrameMatchListener listener) {
             listeners.add(listener);
             return this;
         }
 
+        /**
+         * Remove a listener
+         *
+         * @param listener
+         * @return Fluent interface
+         */
         public FrameDefinition removeListener(FrameMatchListener listener) {
             listeners.remove(listener);
             return this;
@@ -222,6 +297,11 @@ public class SerialParser {
     protected SerialParser() {
     }
 
+    /**
+     * Adds a number of bytes to the internal buffer and tries to match frames.
+     *
+     * @param bytes
+     */
     public void add(byte[] bytes) {
         if (bytes.length > mLongestFrameSize) {
             byte[] b = new byte[mLongestFrameSize];
