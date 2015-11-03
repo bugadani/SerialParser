@@ -13,10 +13,28 @@ public class SerialParserTest {
         new SerialParser
                 .Builder()
                 .addFrameDefinition(
-                        new SerialParser.FrameDefinition(0, "-".getBytes()).setDataLength(1)
+                        new SerialParser.FrameDefinition(0, '-').setDataLength(1)
                 )
                 .addFrameDefinition(
-                        new SerialParser.FrameDefinition(0, "+".getBytes()).setDataLength(1)
+                        new SerialParser.FrameDefinition(0, '+').setDataLength(1)
+                );
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testInitializationGuard() {
+        SerialParser.FrameDefinition frame = new SerialParser.FrameDefinition(0, '-').setDataLength(1);
+        new SerialParser
+                .Builder()
+                .addFrameDefinition(frame);
+        frame.setDataLength(2);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testVariableFrameLength() {
+        new SerialParser
+                .Builder()
+                .addFrameDefinition(
+                        new SerialParser.FrameDefinition(0, (byte)'-')
                 );
     }
 
@@ -24,7 +42,7 @@ public class SerialParserTest {
     public void testMatchBytes() throws Exception {
         SerialParser.FrameMatchListener listener = new SerialParser.FrameMatchListener() {
             public void onFrameMatched(SerialParser.FrameDefinition frame, byte[] data) {
-                switch(called++) {
+                switch (called++) {
                     case 0:
                         assertTrue(frame.isFrame(1));
                         assertArrayEquals("123".getBytes(), data);
@@ -47,13 +65,12 @@ public class SerialParserTest {
                 .Builder()
                 .setBufferSize(20)
                 .addFrameDefinition(
-                        new SerialParser.FrameDefinition(0, "-".getBytes())
-                                .setTerminatingByte((byte) ';')
+                        new SerialParser.FrameDefinition(0, '-')
                                 .setDataLength(6)
                                 .addListener(listener)
                 )
                 .addFrameDefinition(
-                        new SerialParser.FrameDefinition(1, "+".getBytes())
+                        new SerialParser.FrameDefinition(1, "+")
                                 .setTerminatingByte((byte) ';')
                                 .addListener(listener)
                 )

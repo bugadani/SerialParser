@@ -104,6 +104,18 @@ public class SerialParser {
 
         private final FrameMatchListener.Aggregator listeners = new FrameMatchListener.Aggregator();
 
+        public FrameDefinition(int frameId, String header) {
+            this(frameId, header.getBytes());
+        }
+
+        public FrameDefinition(int frameId, char header) {
+            this(frameId, new byte[]{(byte) header});
+        }
+
+        public FrameDefinition(int frameId, byte header) {
+            this(frameId, new byte[]{header});
+        }
+
         public FrameDefinition(int frameId, byte[] header) {
             mFrameId = frameId;
             mHeader = header;
