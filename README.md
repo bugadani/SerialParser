@@ -22,6 +22,7 @@ The following example will call the listener object with "matched" as the second
                 }
             };
 
+    //Create a parser to match a variable length frame
     SerialParser parser = new SerialParser
                                  .Builder()
                                  .setBufferSize(9)  //large enough to match "+matched;"
@@ -44,7 +45,7 @@ SerialParser is available as a Maven repository through jitpack.io
     }
 
     dependencies {
-        compile 'com.github.bugadani:SerialParser:d00b6f2'
+        compile 'com.github.bugadani:SerialParser:7500c51'
     }
 
 ### Maven
@@ -57,5 +58,5 @@ SerialParser is available as a Maven repository through jitpack.io
     <dependency>
         <groupId>com.github.bugadani</groupId>
         <artifactId>SerialParser</artifactId>
-        <version>d00b6f2</version>
+        <version>7500c51</version>
     </dependency>
