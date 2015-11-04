@@ -37,7 +37,7 @@ Installation
 ------------
 SerialParser is available as a Maven repository through jitpack.io
 
-## As a Gradle dependency
+### As a Gradle dependency
 
     repositories {
         maven { url "https://jitpack.io" }
@@ -47,7 +47,7 @@ SerialParser is available as a Maven repository through jitpack.io
         compile 'com.github.bugadani:SerialParser:d00b6f2'
     }
 
-## Maven
+### Maven
 
     <repository>
         <id>jitpack.io</id>
