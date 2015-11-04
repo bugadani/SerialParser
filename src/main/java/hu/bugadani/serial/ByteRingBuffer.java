@@ -59,8 +59,8 @@ public class ByteRingBuffer {
                 int dropBytes = size - copyLength;
                 tail = wrap(tail + dropBytes);
             }
-        } else if(alignment == CopyAlignment.Left) {
-             copyLength = size;
+        } else if (alignment == CopyAlignment.Left) {
+            copyLength = size;
         }
 
         int distToEnd = mArray.length - tail;
@@ -151,7 +151,20 @@ public class ByteRingBuffer {
      * @throws BufferOverflowException
      */
     public void add(byte[] list) {
-        if (list.length > getSpace()) {
+        add(list, list.length);
+    }
+
+    /**
+     * Add a number of bytes to the buffer's end.
+     *
+     * @param list The bytes to add
+     * @throws BufferOverflowException
+     */
+    public void add(byte[] list, int length) {
+        if (length > list.length) {
+            throw new IllegalArgumentException("length > list.length");
+        }
+        if (length > getSpace()) {
             throw new BufferOverflowException();
         }
 
@@ -159,12 +172,12 @@ public class ByteRingBuffer {
         // instead of one at a time.
 
         int ptr = 0;
-        while (ptr < list.length) {
+        while (ptr < length) {
             int space = getSpace();
             int distToEnd = mArray.length - mHead;
             int blockLen = Math.min(space, distToEnd);
 
-            int bytesRemaining = list.length - ptr;
+            int bytesRemaining = length - ptr;
             int copyLen = Math.min(blockLen, bytesRemaining);
 
             System.arraycopy(list, ptr, mArray, mHead, copyLen);

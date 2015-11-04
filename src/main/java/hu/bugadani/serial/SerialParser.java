@@ -50,7 +50,7 @@ public class SerialParser {
 
         /**
          * Sets an explicit buffer size
-         *
+         * <p>
          * Note: this is only a hint and may be overridden if a fixed length frame is longer than bufferSize.
          *
          * @param bufferSize The buffer size
@@ -317,18 +317,30 @@ public class SerialParser {
     }
 
     private void addInternal(byte[] bytes) {
-        if (bytes.length != 0) {
-            mSyncBuffer.add(bytes);
+        if (bytes.length == 0) {
+            return;
+        }
 
-            int size = mSyncBuffer.getSize();
-            while (!mSyncBuffer.isEmpty()) {
-                if (!step()) {
-                    break;
-                }
-                if (mSyncBuffer.getSize() == size) {
-                    return;
-                }
-                size = mSyncBuffer.getSize();
+        if (mSyncBuffer.getSpace() >= bytes.length) {
+            addBytesInternal(bytes, bytes.length);
+        } else {
+            ByteBuffer buffer = ByteBuffer.wrap(bytes);
+            byte[] b = new byte[Math.min(mLongestFrameSize, bytes.length)];
+
+            while (buffer.remaining() > 0) {
+                int copyLength = Math.min(mSyncBuffer.getSpace(), buffer.remaining());
+                buffer.get(b, 0, copyLength);
+
+                addBytesInternal(b, copyLength);
+            }
+        }
+    }
+
+    private void addBytesInternal(byte[] bytes, int length) {
+        mSyncBuffer.add(bytes, length);
+        while (!mSyncBuffer.isEmpty()) {
+            if (!step()) {
+                break;
             }
         }
     }
@@ -353,6 +365,7 @@ public class SerialParser {
                     return true;
             }
         }
+        //There was at least one 'Maybe'
         if (!removeByte && !mSyncBuffer.isFull()) {
             //wait for next input
             return false;

@@ -81,6 +81,27 @@ public class SerialParserTest {
     }
 
     @Test
+    public void testMatchFixLengthFrame() throws Exception {
+        SerialParser.FrameMatchListener listener = new SerialParser.FrameMatchListener() {
+            public void onFrameMatched(SerialParser.FrameDefinition frame, byte[] data) {
+                called++;
+            }
+        };
+        SerialParser parser = new SerialParser
+                .Builder()
+                .addFrameDefinition(
+                        new SerialParser.FrameDefinition(0, 'x')
+                                .setDataLength(4)
+                                .setTerminatingByte((byte) ';')
+                                .addListener(listener)
+                )
+                .build();
+
+        parser.add("abcdefgxabcd;xabcd;xabcdef".getBytes());
+        assertEquals(2, called);
+    }
+
+    @Test
     public void testMatchVariableLengthData() throws Exception {
         SerialParser.FrameMatchListener listener = new SerialParser.FrameMatchListener() {
             public void onFrameMatched(SerialParser.FrameDefinition frame, byte[] data) {
