@@ -32,3 +32,30 @@ The following example will call the listener object with "matched" as the second
                                  )
                                  .build();
     parser.add("not matched text +matched;".getBytes());
+
+Installation
+------------
+SerialParser is available as a Maven repository through jitpack.io
+
+## As a Gradle dependency
+
+    repositories {
+        maven { url "https://jitpack.io" }
+    }
+
+    dependencies {
+        compile 'com.github.bugadani:SerialParser:d00b6f2'
+    }
+
+## Maven
+
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+
+    <dependency>
+        <groupId>com.github.bugadani</groupId>
+        <artifactId>SerialParser</artifactId>
+        <version>d00b6f2</version>
+    </dependency>
