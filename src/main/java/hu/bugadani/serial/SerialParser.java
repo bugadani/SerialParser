@@ -72,10 +72,10 @@ public class SerialParser {
                 throw new IllegalArgumentException("Duplicate frame id: " + frameDefinition.mFrameId);
             }
 
+            frameDefinition.setInited();
             mLongestFrameSize = Math.max(mLongestFrameSize, frameDefinition.getFrameLength());
             mFrameDefinitionList.add(frameDefinition);
             mFrameIds.add(frameDefinition.mFrameId);
-            frameDefinition.setInited();
 
             return this;
         }
@@ -239,30 +239,38 @@ public class SerialParser {
 
         private MatchResult match(ByteRingBuffer syncBuffer) {
 
+            //Get header bytes
             byte[] headerBytes;
             try {
                 headerBytes = syncBuffer.peekMultiple(mHeader.length);
             } catch (BufferUnderflowException e) {
+                //return Maybe if buffer does not have enough data
                 return MatchResult.Maybe;
             }
 
+            //Check header bytes
             if (!Arrays.equals(mHeader, headerBytes)) {
                 return MatchResult.No;
             }
 
+            int bufferSize = syncBuffer.getSize();
             if (mDataLength == VARIABLE_LENGTH) {
-                for (int index = mHeader.length; index < syncBuffer.getSize(); index++) {
+                //Find the offset of mTerminatingByte in the buffer
+                for (int index = mHeader.length; index < bufferSize; index++) {
                     if (syncBuffer.peek(index) == mTerminatingByte) {
-                        return matched(syncBuffer, index - mHeader.length);
+                        int matchedDataLength = index - mHeader.length;
+                        return matched(syncBuffer, matchedDataLength);
                     }
                 }
             } else {
                 int frameLength = getFrameLength();
-                if (syncBuffer.getSize() >= frameLength) {
+                if (bufferSize >= frameLength) {
+                    //There is enough data to process - look for the terminating byte
                     if (!mHasTerminatingByte || mTerminatingByte == syncBuffer.peek(frameLength - 1)) {
                         return matched(syncBuffer, mDataLength);
                     }
 
+                    //Terminating byte did not match
                     return MatchResult.No;
                 }
             }
@@ -276,14 +284,18 @@ public class SerialParser {
 
         private MatchResult matched(ByteRingBuffer syncBuffer, int length) {
 
+            //remove the header bytes - no longer needed
             syncBuffer.remove(mHeader.length);
 
+            //remove the data bytes
             byte[] data = syncBuffer.remove(length);
 
+            //remove terminating byte, if there is one
             if (mHasTerminatingByte) {
                 syncBuffer.remove();
             }
 
+            //trigger event
             listeners.onFrameMatched(this, data);
 
             return MatchResult.Yes;
@@ -304,15 +316,18 @@ public class SerialParser {
      */
     public void add(byte[] bytes) {
         if (bytes.length > mLongestFrameSize) {
+            //Add in longest frame length blocks
             byte[] b = new byte[mLongestFrameSize];
             final ByteBuffer buffer = ByteBuffer.wrap(bytes);
             while (buffer.remaining() >= mLongestFrameSize) {
                 buffer.get(b, 0, mLongestFrameSize);
                 addInternal(b);
             }
+            //Set the bytes array to the remaining bytes
             bytes = new byte[buffer.remaining()];
-            buffer.get(bytes, 0, buffer.remaining());
+            buffer.get(bytes, 0, bytes.length);
         }
+        //Add (remaining) bytes
         addInternal(bytes);
     }
 
@@ -351,8 +366,7 @@ public class SerialParser {
     private boolean step() {
         boolean removeByte = true;
         for (FrameDefinition fd : mFrameDefinitionList) {
-            final FrameDefinition.MatchResult matchResult = fd.match(mSyncBuffer);
-            switch (matchResult) {
+            switch (fd.match(mSyncBuffer)) {
                 case No:
                     //Empty; match next frame definition
                     break;

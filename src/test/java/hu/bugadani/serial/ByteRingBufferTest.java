@@ -46,6 +46,17 @@ public class ByteRingBufferTest {
         assertFalse(buffer.isFull());
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddingPastArrayLength() {
+        buffer.add(new byte[0], 1);
+    }
+
+    @Test(expected = BufferOverflowException.class)
+    public void testAddOverflow() {
+        buffer.add(new byte[10]);
+        buffer.add((byte)0);
+    }
+
     @Test(expected = BufferOverflowException.class)
     public void testGetSize() throws Exception {
         try {
@@ -137,6 +148,7 @@ public class ByteRingBufferTest {
         buffer.remove(2);
     }
 
+    @Test
     public void testRemoveAllFromEmpty() {
         byte[] bytes = buffer.removeAll();
         assertArrayEquals(new byte[0], bytes);

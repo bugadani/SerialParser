@@ -54,35 +54,28 @@ public class ByteRingBuffer {
 
         int tail = mTail;
         //If buffer is smaller than the current data size...
-        if (copyLength < size) {
-            if (alignment == CopyAlignment.Right) {//... drop bytes from beginning
-                int dropBytes = size - copyLength;
-                tail = wrap(tail + dropBytes);
-            }
-        } else if (alignment == CopyAlignment.Left) {
-            copyLength = size;
+        if (copyLength < size && alignment == CopyAlignment.Right) {
+            int dropBytes = size - copyLength;
+            tail = wrap(tail + dropBytes);
         }
 
         int distToEnd = mArray.length - tail;
         //If the source data wraps around the end of the array...
-        if (copyLength <= distToEnd) {
-            System.arraycopy(mArray, tail, dest, 0, copyLength);
-        } else {
+        if (copyLength > distToEnd) {
             //.. copy in two steps
 
             //copy the second part to the beginning
             System.arraycopy(mArray, tail, dest, 0, distToEnd);
             //copy the first part to the end
             System.arraycopy(mArray, 0, dest, distToEnd, copyLength - distToEnd);
+        } else {
+            //... else copy in one go
+            System.arraycopy(mArray, tail, dest, 0, copyLength);
         }
     }
 
     private int wrap(int i) {
-        int mod = i % mArray.length;
-        if (i < 0) {
-            mod += mArray.length;
-        }
-        return mod;
+        return i % mArray.length;
     }
 
     private void stepTail(int i) {
@@ -173,11 +166,10 @@ public class ByteRingBuffer {
 
         int ptr = 0;
         while (ptr < length) {
-            int space = getSpace();
             int distToEnd = mArray.length - mHead;
-            int blockLen = Math.min(space, distToEnd);
-
             int bytesRemaining = length - ptr;
+
+            int blockLen = Math.min(getSpace(), distToEnd);
             int copyLen = Math.min(blockLen, bytesRemaining);
 
             System.arraycopy(list, ptr, mArray, mHead, copyLen);
