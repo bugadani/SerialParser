@@ -1,6 +1,5 @@
 package hu.bugadani.serial;
 
-import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -86,8 +85,6 @@ public class SerialParser {
          * @return The created object
          */
         public SerialParser build() {
-            final SerialParser object = new SerialParser();
-
             if (mBufferSize == 0) {
                 for (FrameDefinition def : mFrameDefinitionList) {
                     if (def.mDataLength == FrameDefinition.VARIABLE_LENGTH) {
@@ -96,11 +93,10 @@ public class SerialParser {
                 }
             }
 
-            object.mSyncBuffer = new ByteRingBuffer(Math.max(mLongestFrameSize, mBufferSize));
-            object.mFrameDefinitionList = mFrameDefinitionList;
-            object.mLongestFrameSize = mLongestFrameSize;
+            ByteRingBuffer byteRingBuffer = new ByteRingBuffer(Math.max(mLongestFrameSize, mBufferSize));
+            FrameDefinition[] frameDefinitions = mFrameDefinitionList.toArray(new FrameDefinition[0]);
 
-            return object;
+            return new SerialParser(byteRingBuffer, frameDefinitions, mLongestFrameSize);
         }
     }
 
@@ -109,7 +105,7 @@ public class SerialParser {
      */
     public static class FrameDefinition {
 
-        public enum MatchResult {
+        enum MatchResult {
             No,
             Maybe,
             Yes
@@ -239,14 +235,13 @@ public class SerialParser {
 
         private MatchResult match(ByteRingBuffer syncBuffer) {
 
-            //Get header bytes
-            byte[] headerBytes;
-            try {
-                headerBytes = syncBuffer.peekMultiple(mHeader.length);
-            } catch (BufferUnderflowException e) {
+            if (syncBuffer.getSize() <= mHeader.length) {
                 //return Maybe if buffer does not have enough data
                 return MatchResult.Maybe;
             }
+
+            //Get header bytes
+            byte[] headerBytes = syncBuffer.peekMultiple(mHeader.length);
 
             //Check header bytes
             if (!Arrays.equals(mHeader, headerBytes)) {
@@ -302,11 +297,14 @@ public class SerialParser {
         }
     }
 
-    private ByteRingBuffer mSyncBuffer;
-    private List<FrameDefinition> mFrameDefinitionList;
-    private int mLongestFrameSize;
+    private final ByteRingBuffer mSyncBuffer;
+    private final FrameDefinition[] mFrameDefinitions;
+    private final int mLongestFrameSize;
 
-    protected SerialParser() {
+    protected SerialParser(ByteRingBuffer byteRingBuffer, FrameDefinition[] frameDefinitions, int longestFrameSize) {
+        mSyncBuffer = byteRingBuffer;
+        mFrameDefinitions = frameDefinitions;
+        mLongestFrameSize = longestFrameSize;
     }
 
     /**
@@ -365,7 +363,7 @@ public class SerialParser {
      */
     private boolean step() {
         boolean removeByte = true;
-        for (FrameDefinition fd : mFrameDefinitionList) {
+        for (FrameDefinition fd : mFrameDefinitions) {
             switch (fd.match(mSyncBuffer)) {
                 case No:
                     //Empty; match next frame definition
