@@ -308,6 +308,20 @@ public class SerialParser {
     }
 
     /**
+     * Adds one byte to the internal buffer and tries to match frames.
+     *
+     * @param b
+     */
+    public void add(byte b) {
+        mSyncBuffer.add(b);
+        while (!mSyncBuffer.isEmpty()) {
+            if (!step()) {
+                break;
+            }
+        }
+    }
+
+    /**
      * Adds a number of bytes to the internal buffer and tries to match frames.
      *
      * @param bytes

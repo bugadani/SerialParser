@@ -122,4 +122,28 @@ public class SerialParserTest {
         parser.add(" something that will not be matched  +123456789;".getBytes());
         assertEquals(1, called);
     }
+
+    @Test
+    public void testAddingBytesOneByOne() throws Exception {
+        SerialParser.FrameMatchListener listener = new SerialParser.FrameMatchListener() {
+            public void onFrameMatched(SerialParser.FrameDefinition frame, byte[] data) {
+                assertArrayEquals("123456789".getBytes(), data);
+                called = 1;
+            }
+        };
+        SerialParser parser = new SerialParser
+                .Builder()
+                .setBufferSize(11)
+                .addFrameDefinition(
+                        new SerialParser.FrameDefinition(1, "+")
+                                .setTerminatingByte((byte) ';')
+                                .addListener(listener)
+                )
+                .build();
+
+        for (byte b : " something that will not be matched  +123456789;".getBytes()) {
+            parser.add(b);
+        }
+        assertEquals(1, called);
+    }
 }
