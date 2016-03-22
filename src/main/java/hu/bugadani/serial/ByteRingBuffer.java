@@ -156,25 +156,26 @@ public class ByteRingBuffer {
     public void add(byte[] list, int length) {
         if (length > list.length) {
             throw new IllegalArgumentException("length > list.length");
-        }
-        if (length > getSpace()) {
+        } else if (length == 1) {
+            add(list[0]);
+        } else if (length > getSpace()) {
             throw new BufferOverflowException();
-        }
+        } else {
+            // For efficiency, the bytes are copied in blocks
+            // instead of one at a time.
 
-        // For efficiency, the bytes are copied in blocks
-        // instead of one at a time.
+            int ptr = 0;
+            while (ptr < length) {
+                int distToEnd = mArray.length - mHead;
+                int bytesRemaining = length - ptr;
 
-        int ptr = 0;
-        while (ptr < length) {
-            int distToEnd = mArray.length - mHead;
-            int bytesRemaining = length - ptr;
+                int blockLen = Math.min(getSpace(), distToEnd);
+                int copyLen = Math.min(blockLen, bytesRemaining);
 
-            int blockLen = Math.min(getSpace(), distToEnd);
-            int copyLen = Math.min(blockLen, bytesRemaining);
-
-            System.arraycopy(list, ptr, mArray, mHead, copyLen);
-            stepHead(copyLen);
-            ptr += copyLen;
+                System.arraycopy(list, ptr, mArray, mHead, copyLen);
+                stepHead(copyLen);
+                ptr += copyLen;
+            }
         }
     }
 

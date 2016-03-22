@@ -314,11 +314,7 @@ public class SerialParser {
      */
     public void add(byte b) {
         mSyncBuffer.add(b);
-        while (!mSyncBuffer.isEmpty()) {
-            if (!step()) {
-                break;
-            }
-        }
+        process();
     }
 
     /**
@@ -348,7 +344,9 @@ public class SerialParser {
             return;
         }
 
-        if (mSyncBuffer.getSpace() >= bytes.length) {
+        if (bytes.length == 1) {
+            add(bytes[0]);
+        } else if (mSyncBuffer.getSpace() >= bytes.length) {
             addBytesInternal(bytes, bytes.length);
         } else {
             ByteBuffer buffer = ByteBuffer.wrap(bytes);
@@ -365,6 +363,10 @@ public class SerialParser {
 
     private void addBytesInternal(byte[] bytes, int length) {
         mSyncBuffer.add(bytes, length);
+        process();
+    }
+
+    private void process() {
         while (!mSyncBuffer.isEmpty()) {
             if (!step()) {
                 break;
