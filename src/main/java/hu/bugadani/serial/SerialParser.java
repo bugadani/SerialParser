@@ -1,6 +1,7 @@
 package hu.bugadani.serial;
 
 import java.nio.ByteBuffer;
+import java.nio.channels.InterruptedByTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -105,13 +106,9 @@ public class SerialParser {
      */
     public static class FrameDefinition {
 
-        enum MatchResult {
-            No,
-            Maybe,
-            Yes
-        }
-
         public static final int VARIABLE_LENGTH = 0;
+        public static final int MATCHED_MAYBE = -2;
+        public static final int MATCHED_NO = -1;
 
         private final int mFrameId;
 
@@ -233,11 +230,11 @@ public class SerialParser {
             mInitialized = true;
         }
 
-        private MatchResult match(ByteRingBuffer syncBuffer) {
+        private int match(ByteRingBuffer syncBuffer) {
 
             if (syncBuffer.getSize() <= mHeader.length) {
                 //return Maybe if buffer does not have enough data
-                return MatchResult.Maybe;
+                return MATCHED_MAYBE;
             }
 
             //Get header bytes
@@ -245,7 +242,7 @@ public class SerialParser {
 
             //Check header bytes
             if (!Arrays.equals(mHeader, headerBytes)) {
-                return MatchResult.No;
+                return MATCHED_NO;
             }
 
             int bufferSize = syncBuffer.getSize();
@@ -266,34 +263,29 @@ public class SerialParser {
                     }
 
                     //Terminating byte did not match
-                    return MatchResult.No;
+                    return MATCHED_NO;
                 }
             }
 
-            return MatchResult.Maybe;
+            return MATCHED_MAYBE;
         }
 
         private int getFrameLength() {
             return mHeader.length + mDataLength + (mHasTerminatingByte ? 1 : 0);
         }
 
-        private MatchResult matched(ByteRingBuffer syncBuffer, int length) {
+        private int matched(ByteRingBuffer syncBuffer, int length) {
+            int matchLength = mHeader.length + length + (mHasTerminatingByte ? 1 : 0);
 
-            //remove the header bytes - no longer needed
-            syncBuffer.remove(mHeader.length);
-
-            //remove the data bytes
-            byte[] data = syncBuffer.remove(length);
-
-            //remove terminating byte, if there is one
-            if (mHasTerminatingByte) {
-                syncBuffer.remove();
-            }
+            //get the data bytes
+            byte[] data = syncBuffer.peekMultiple(matchLength);
+            byte[] trimmed = new byte[length];
+            ByteBuffer.wrap(data, mHeader.length, length).get(trimmed);
 
             //trigger event
-            listeners.onFrameMatched(this, data);
+            listeners.onFrameMatched(this, trimmed);
 
-            return MatchResult.Yes;
+            return matchLength;
         }
     }
 
@@ -379,19 +371,27 @@ public class SerialParser {
      */
     private boolean step() {
         boolean removeByte = true;
+        int matchedBytes = Integer.MAX_VALUE;
         for (FrameDefinition fd : mFrameDefinitions) {
-            switch (fd.match(mSyncBuffer)) {
-                case No:
+            int match = fd.match(mSyncBuffer);
+            switch (match) {
+                case FrameDefinition.MATCHED_NO:
                     //Empty; match next frame definition
                     break;
-                case Maybe:
+                case FrameDefinition.MATCHED_MAYBE:
                     //Match next frame definition, but don't remove a byte if none is matching
                     removeByte = false;
                     break;
-                case Yes:
+                default:
                     //Stop matching
-                    return true;
+                    matchedBytes = Math.min(matchedBytes, match);
+                    break;
             }
+        }
+        //If there was a match, remove the shortest matched frame
+        if (matchedBytes < Integer.MAX_VALUE) {
+            mSyncBuffer.remove(matchedBytes);
+            return true;
         }
         //There was at least one 'Maybe'
         if (!removeByte && !mSyncBuffer.isFull()) {

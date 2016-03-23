@@ -146,4 +146,32 @@ public class SerialParserTest {
         }
         assertEquals(1, called);
     }
+
+    @Test
+    public void testMultipleMatchingFrames() throws Exception {
+        called = 0;
+        SerialParser.FrameMatchListener listener = new SerialParser.FrameMatchListener() {
+            public void onFrameMatched(SerialParser.FrameDefinition frame, byte[] data) {
+                assertArrayEquals("123456789".getBytes(), data);
+                called++;
+            }
+        };
+        SerialParser parser = new SerialParser
+                .Builder()
+                .setBufferSize(11)
+                .addFrameDefinition(
+                        new SerialParser.FrameDefinition(1, "+")
+                                .setTerminatingByte((byte) ';')
+                                .addListener(listener)
+                )
+                .addFrameDefinition(
+                        new SerialParser.FrameDefinition(2, "+")
+                                .setTerminatingByte((byte) ';')
+                                .addListener(listener)
+                )
+                .build();
+
+        parser.add(" something that will not be matched  +123456789;".getBytes());
+        assertEquals(2, called);
+    }
 }
