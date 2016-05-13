@@ -171,6 +171,13 @@ public class SerialParser {
             return mFrameId == frameId;
         }
 
+        /**
+         * @return the frame ID
+         */
+        public int getFrameId() {
+            return mFrameId;
+        }
+
         private void initGuard() {
             if (mInitialized) {
                 throw new IllegalStateException("FrameDefinition is already initialized");
